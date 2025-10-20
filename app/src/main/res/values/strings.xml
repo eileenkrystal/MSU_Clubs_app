@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">MSU Clubs</string>
+    <string name="msu_logo_desc">MSU Logo</string>
+    <string name="netid_hint">Enter your NetID</string>
+    <string name="password_hint">Enter your password</string>
+    <string name="remember_me">Remember me</string>
+    <string name="login_button">SIGN IN</string>
+
+    <!-- Club listing strings -->
+    <string name="clubs_title">STEM Clubs</string>
+    <string name="search_hint">Search clubs…</string>
+    <string name="filter_stem">Show STEM clubs only</string>
+
+    <!-- Club details strings -->
+    <string name="wic_logo_desc">Women in Computing Logo</string>
+    <string name="wic_club_name">Women in Computing</string>
+    <string name="meeting_time">Meeting Time: Every Tuesday from 6:00pm - 7:00pm</string>
+    <string name="location">Location: STEM Building</string>
+
+    <!-- Clubs list string (combine time and location version for the club list page) -->
+    <string name="wic_meeting_time">Every Tuesday from 6:00pm - 7:00pm at the STEM Building</string>
+
+    <!-- Action buttons -->
+    <string name="get_directions">Get Directions</string>
+    <string name="add_favorites">Add to Favorites</string>
+    <string name="set_reminder">Set Meeting Reminder</string>
+
+    <!-- Toast messages -->
+    <string name="opening_directions">Opening directions to STEM Building</string>
+    <string name="reminder_set">Reminder set for Tuesday 5:00 PM</string>
+    <string name="reminder_cancelled">Reminder cancelled</string>
+    <string name="enter_cred">Please enter NetID and password</string>
+</resources>
