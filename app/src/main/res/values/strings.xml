@@ -15,7 +15,8 @@
     <string name="wic_logo_desc">Women in Computing Logo</string>
     <string name="wic_club_name">Women in Computing</string>
     <string name="meeting_time">Meeting Time: Every Tuesday from 6:00pm - 7:00pm</string>
-    <string name="location">Location: STEM Building</string>
+    <string name="location">STEM Building, Michigan State University</string>
+    <string name="location_display">Location: STEM Building, Michigan State University</string>
 
     <!-- Clubs list string (combine time and location version for the club list page) -->
     <string name="wic_meeting_time">Every Tuesday from 6:00pm - 7:00pm at the STEM Building</string>

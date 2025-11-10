@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- NEW: Location permissions required for the "Get Directions" feature -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,7 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Cse476">
 
-        <!-- Make LoginActivity the launcher (first screen) -->
+        <!-- LoginActivity is the first screen users see -->
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -22,21 +26,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Clubs Activity -->
+        <!-- Clubs Activity - shows list of clubs -->
         <activity
             android:name=".ClubsActivity"
             android:exported="false" />
 
-        <!-- Club Details Activity -->
+        <!-- Club Details Activity - shows individual club details with NEW location feature -->
         <activity
             android:name=".ClubDetailsActivity"
             android:exported="false" />
 
-        <!-- Remove or comment out MainActivity since we're not using it -->
-        <!--
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
-        -->
+        <!-- MainActivity not used as launcher anymore -->
     </application>
 </manifest>
