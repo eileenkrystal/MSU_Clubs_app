@@ -2,56 +2,99 @@ package com.example.cse476;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.IOException;
+import java.util.List;
 
-import okhttp3.Call;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-// SECOND ACTIVITY - shows list of clubs
 public class ClubsActivity extends AppCompatActivity {
 
     private EditText searchEditText;
-    private Button sampleClubButton;
     private CheckBox stemFilterCheckBox;
+    private RecyclerView recyclerClubs;
+    private ProgressBar progressBar;
+
+    private ClubAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_clubs);
 
-        // Initialize UI components
         searchEditText = findViewById(R.id.searchEditText);
-        sampleClubButton = findViewById(R.id.sampleClubButton);
         stemFilterCheckBox = findViewById(R.id.stemFilterCheckBox);
+        recyclerClubs = findViewById(R.id.recyclerClubs);
+        progressBar = findViewById(R.id.progressBar);
 
-        Button profileButton = findViewById(R.id.profileButton);
-        profileButton.setOnClickListener(v -> {
-            startActivity(new Intent(ClubsActivity.this, ProfileActivity.class));
+        // RecyclerView setup
+        adapter = new ClubAdapter(club -> {
+            // Click -> go to details
+            Intent intent = new Intent(ClubsActivity.this, ClubDetailsActivity.class);
+            intent.putExtra("CLUB_ID", club.id);
+            startActivity(intent);
         });
 
-        Button deleteAccountButton = findViewById(R.id.deleteAccountButton);
-        deleteAccountButton.setOnClickListener(v -> deleteAccount());
+        recyclerClubs.setLayoutManager(new LinearLayoutManager(this));
+        recyclerClubs.setAdapter(adapter);
+        recyclerClubs.addItemDecoration(
+                new DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
+        );
 
-        // Set actual club name
-        sampleClubButton.setText(R.string.wic_club_name);
+        // Filters
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.applyFilters(s.toString(), stemFilterCheckBox.isChecked());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
-        // UPDATED: When club button is clicked, go to Club Details activity
-        sampleClubButton.setOnClickListener(v -> {
-            Intent intent = new Intent(ClubsActivity.this, ClubDetailsActivity.class);
-            intent.putExtra("CLUB_LOCATION", getString(R.string.location));
-            startActivity(intent);
+        stemFilterCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            adapter.applyFilters(searchEditText.getText().toString(), isChecked);
+        });
+
+        // Load data
+        fetchClubs();
+    }
+
+    private void fetchClubs() {
+        progressBar.setVisibility(android.view.View.VISIBLE);
+        SupabaseApi api = ApiClient.get(this);
+        api.listClubs("*").enqueue(new Callback<List<Club>>() {
+            @Override
+            public void onResponse(Call<List<Club>> call, Response<List<Club>> response) {
+                progressBar.setVisibility(android.view.View.GONE);
+                if (!response.isSuccessful() || response.body() == null) {
+                    Toast.makeText(ClubsActivity.this, "Failed to load clubs: " + response.code(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                adapter.setData(response.body());
+                // apply current filters
+                adapter.applyFilters(searchEditText.getText().toString(), stemFilterCheckBox.isChecked());
+            }
+
+            @Override
+            public void onFailure(Call<List<Club>> call, Throwable t) {
+                progressBar.setVisibility(android.view.View.GONE);
+                Toast.makeText(ClubsActivity.this, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
         });
     }
 
+    // Preserve the search/filter values across rotation
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -64,58 +107,5 @@ public class ClubsActivity extends AppCompatActivity {
         super.onRestoreInstanceState(savedInstanceState);
         searchEditText.setText(savedInstanceState.getString("searchText", ""));
         stemFilterCheckBox.setChecked(savedInstanceState.getBoolean("stemFilter", false));
-    }
-
-    private void deleteAccount() {
-        String token = getSharedPreferences("APP_PREFS", MODE_PRIVATE)
-                .getString("JWT", null);
-
-        if (token == null) {
-            runOnUiThread(() ->
-                    Toast.makeText(ClubsActivity.this, "Not authenticated", Toast.LENGTH_SHORT).show()
-            );
-            return;
-        }
-
-        OkHttpClient client = new OkHttpClient();
-        String url = Config.SUPABASE_URL + "/auth/v1/user";
-
-        Request request = new Request.Builder()
-                .url(url)
-                .delete()
-                .addHeader("apikey", Config.SUPABASE_ANNON_KEY)
-                .addHeader("Authorization", "Bearer " + token)
-                .build();
-
-        client.newCall(request).enqueue(new okhttp3.Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                runOnUiThread(() ->
-                        Toast.makeText(ClubsActivity.this, "Network error", Toast.LENGTH_SHORT).show()
-                );
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-
-                    getSharedPreferences("APP_PREFS", MODE_PRIVATE)
-                            .edit()
-                            .clear()
-                            .apply();
-
-                    runOnUiThread(() -> {
-                        Toast.makeText(ClubsActivity.this, "Account deleted", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(ClubsActivity.this, LoginActivity.class));
-                        finish();
-                    });
-
-                } else {
-                    runOnUiThread(() ->
-                            Toast.makeText(ClubsActivity.this, "Delete failed", Toast.LENGTH_SHORT).show()
-                    );
-                }
-            }
-        });
     }
 }
