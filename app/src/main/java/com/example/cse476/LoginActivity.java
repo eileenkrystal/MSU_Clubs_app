@@ -8,8 +8,15 @@ import android.widget.EditText;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.cse476.Config;
+import org.json.JSONObject;
+import java.io.IOException;
+import okhttp3.*;
+
 // FIRST ACTIVITY - handles user login
 public class LoginActivity extends AppCompatActivity {
+
+    private final OkHttpClient client = new OkHttpClient();
 
     // Variables that hold references to UI components
     private EditText netIdEditText;
@@ -37,22 +44,22 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     // This method handles the login process
-    private void attemptLogin() {
-        // Get text from input fields
-        String netId = netIdEditText.getText().toString();
-        String password = passwordEditText.getText().toString();
-
-        // create an if statement to check if fields are empty
-        if (netId.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, R.string.enter_cred, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-
-        // Create an Intent to navigate to ClubsActivity
-        Intent intent = new Intent(LoginActivity.this, ClubsActivity.class);
-        startActivity(intent); // This actually starts the new activity
-    }
+//    private void attemptLogin() {
+//        // Get text from input fields
+//        String netId = netIdEditText.getText().toString();
+//        String password = passwordEditText.getText().toString();
+//
+//        // create an if statement to check if fields are empty
+//        if (netId.isEmpty() || password.isEmpty()) {
+//            Toast.makeText(this, R.string.enter_cred, Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//
+//
+//        // Create an Intent to navigate to ClubsActivity
+//        Intent intent = new Intent(LoginActivity.this, ClubsActivity.class);
+//        startActivity(intent); // This actually starts the new activity
+//    }
 
     // State Preservation
     // This saves data when screen rotates or app goes to background
@@ -72,4 +79,65 @@ public class LoginActivity extends AppCompatActivity {
         netIdEditText.setText(savedInstanceState.getString("netId", ""));
         rememberMeCheckBox.setChecked(savedInstanceState.getBoolean("rememberMe", false));
     }
+
+    private void attemptLogin() {
+        String email = ((EditText)findViewById(R.id.netIdEditText)).getText().toString().trim();
+        String password = ((EditText)findViewById(R.id.passwordEditText)).getText().toString().trim();
+
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Please enter your credentials", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String url = Config.SUPABASE_URL + "/auth/v1/token?grant_type=password";
+        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+        String jsonBody = "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
+        RequestBody body = RequestBody.create(jsonBody, JSON);
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .addHeader("apikey", Config.SUPABASE_ANNON_KEY)
+                .addHeader("Content-Type", "application/json")
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() ->
+                        Toast.makeText(LoginActivity.this, "Network error", Toast.LENGTH_SHORT).show()
+                );
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String res = response.body().string();
+                if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(res);
+                        String token = json.getString("access_token");
+
+                        getSharedPreferences("APP_PREFS", MODE_PRIVATE)
+                                .edit()
+                                .putString("JWT", token)
+                                .apply();
+
+                        runOnUiThread(() -> {
+                            Toast.makeText(LoginActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(LoginActivity.this, ClubsActivity.class));
+                        });
+                    } catch (Exception ex) {
+                        runOnUiThread(() ->
+                                Toast.makeText(LoginActivity.this, "Parse error", Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                } else {
+                    runOnUiThread(() ->
+                            Toast.makeText(LoginActivity.this, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                    );
+                }
+            }
+        });
+    }
+
 }
