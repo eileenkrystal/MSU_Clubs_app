@@ -34,4 +34,9 @@
 
     <string name="supabase_base_url">https://xsqggtnsjykswbizmfbu.supabase.co/</string>
     <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzcWdndG5zanlrc3diaXptZmJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4MjMyMDYsImV4cCI6MjA3ODM5OTIwNn0.aaEj63hZCPv4X_qcdfm7zHSCQ3LBzLQsmhAHwuwplQU</string>
+    <string name="assignment_4_login">
+    ASSIGNMENT 4: Example Login
+    Email: example@gmail.com
+    Password: cse476
+</string>
 </resources>
