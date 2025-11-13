@@ -14,10 +14,10 @@
         android:id="@+id/msuLogo"
         android:layout_width="200dp"
         android:layout_height="120dp"
-        android:src="@drawable/msu_logo"
-        android:scaleType="fitCenter"
-        android:contentDescription="@string/msu_logo_desc"
         android:layout_marginTop="60dp"
+        android:contentDescription="@string/msu_logo_desc"
+        android:scaleType="fitCenter"
+        android:src="@drawable/msu_logo"
         app:layout_constraintBottom_toTopOf="@+id/textView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -44,9 +44,9 @@
         android:layout_marginStart="32dp"
         android:layout_marginTop="60dp"
         android:layout_marginEnd="32dp"
+        android:autofillHints="username"
         android:hint="@string/netid_hint"
         android:inputType="text"
-        android:autofillHints="username"
         android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -60,9 +60,9 @@
         android:layout_marginStart="32dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="32dp"
+        android:autofillHints="password"
         android:hint="@string/password_hint"
         android:inputType="textPassword"
-        android:autofillHints="password"
         android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -95,15 +95,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/rememberMeCheckBox" />
 
-    <Button
-        android:id="@+id/signupRedirectButton"
-        android:text="Create Account"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/loginButton"
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="227dp"
+        android:layout_height="102dp"
+        android:layout_marginStart="109dp"
+        android:layout_marginTop="600dp"
+        android:layout_marginEnd="110dp"
+        android:layout_marginBottom="37dp"
+        android:text="@string/assignment_4_login"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.485"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
