@@ -41,6 +41,12 @@ public class LoginActivity extends AppCompatActivity {
         // Set up login button click listener
         // When button is clicked, call attemptLogin() method
         loginButton.setOnClickListener(v -> attemptLogin());
+
+        Button signupRedirect = findViewById(R.id.signupRedirectButton);
+        signupRedirect.setOnClickListener(v ->
+                startActivity(new Intent(LoginActivity.this, SignUpActivity.class))
+        );
+
     }
 
     // This method handles the login process
@@ -112,31 +118,52 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String res = response.body().string();
-                if (response.isSuccessful()) {
-                    try {
-                        JSONObject json = new JSONObject(res);
-                        String token = json.getString("access_token");
 
-                        getSharedPreferences("APP_PREFS", MODE_PRIVATE)
-                                .edit()
-                                .putString("JWT", token)
-                                .apply();
+                try {
+                    JSONObject json = new JSONObject(res);
 
-                        runOnUiThread(() -> {
-                            Toast.makeText(LoginActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(LoginActivity.this, ClubsActivity.class));
-                        });
-                    } catch (Exception ex) {
+                    // If Supabase returns an error like "email_not_confirmed"
+                    if (!response.isSuccessful()) {
+                        String msg = json.optString("msg", "Login failed");
+
                         runOnUiThread(() ->
-                                Toast.makeText(LoginActivity.this, "Parse error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(LoginActivity.this,
+                                        "Login failed: " + msg,
+                                        Toast.LENGTH_SHORT).show()
                         );
+                        return;
                     }
-                } else {
+
+                    // If successful but missing access_token → email not verified
+                    if (!json.has("access_token")) {
+                        runOnUiThread(() ->
+                                Toast.makeText(LoginActivity.this,
+                                        "Please verify your email before logging in.",
+                                        Toast.LENGTH_LONG).show()
+                        );
+                        return;
+                    }
+
+                    // Normal successful login
+                    String token = json.getString("access_token");
+
+                    getSharedPreferences("APP_PREFS", MODE_PRIVATE)
+                            .edit()
+                            .putString("JWT", token)
+                            .apply();
+
+                    runOnUiThread(() -> {
+                        Toast.makeText(LoginActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(LoginActivity.this, ClubsActivity.class));
+                    });
+
+                } catch (Exception e) {
                     runOnUiThread(() ->
-                            Toast.makeText(LoginActivity.this, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(LoginActivity.this, "Unexpected response", Toast.LENGTH_SHORT).show()
                     );
                 }
             }
+
         });
     }
 

@@ -92,4 +92,30 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/wicLogo" />
 
+    <Button
+        android:id="@+id/profileButton"
+        android:text="My Profile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="16dp"
+        android:backgroundTint="#18453B"
+        android:textColor="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@+id/sampleClubDetails"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/deleteAccountButton"
+        android:text="Delete Account"
+        android:backgroundTint="#B00020"
+        android:textColor="#FFFFFF"
+        android:layout_marginTop="16dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/profileButton"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

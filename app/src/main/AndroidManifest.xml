@@ -18,6 +18,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Cse476">
 
+        <activity android:name=".SignUpActivity" />
+
+
+        <activity android:name=".ProfileActivity" />
+
         <!-- LoginActivity is the first screen users see -->
         <activity
             android:name=".LoginActivity"
