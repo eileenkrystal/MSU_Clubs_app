@@ -7,9 +7,7 @@
     android:background="#FFFFFF"
     tools:context=".LoginActivity">
 
-    <!-- MSU Logo - GRAPHIC ELEMENT
-     Puts the image at the top of the screen
-     https://noirlab.edu/public/products/logos/logo031/-->
+    <!-- MSU Logo -->
     <ImageView
         android:id="@+id/msuLogo"
         android:layout_width="200dp"
@@ -23,7 +21,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Show App Title -->
+    <!-- App Title -->
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
@@ -36,7 +34,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/msuLogo" />
 
-    <!-- RESPONSIVE ELEMENT 1: NetID Input -->
+    <!-- NetID Input -->
     <EditText
         android:id="@+id/netIdEditText"
         android:layout_width="0dp"
@@ -52,7 +50,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
 
-    <!-- RESPONSIVE ELEMENT 2: Password Input -->
+    <!-- Password Input -->
     <EditText
         android:id="@+id/passwordEditText"
         android:layout_width="0dp"
@@ -68,7 +66,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/netIdEditText" />
 
-    <!-- RESPONSIVE ELEMENT 3: Remember Me Checkbox -->
+    <!-- Remember Me Checkbox -->
     <CheckBox
         android:id="@+id/rememberMeCheckBox"
         android:layout_width="wrap_content"
@@ -95,20 +93,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/rememberMeCheckBox" />
 
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="227dp"
-        android:layout_height="102dp"
-        android:layout_marginStart="109dp"
-        android:layout_marginTop="600dp"
-        android:layout_marginEnd="110dp"
-        android:layout_marginBottom="37dp"
-        android:text="@string/assignment_4_login"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.485"
+    <!-- Sign Up Redirect Button -->
+    <Button
+        android:id="@+id/signupRedirectButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Sign Up"
+        android:textAllCaps="false"
+        android:backgroundTint="#DDDDDD"
+        app:layout_constraintTop_toBottomOf="@id/loginButton"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
