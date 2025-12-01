@@ -71,9 +71,13 @@ public class SignUpActivity extends AppCompatActivity {
             public void onResponse(Call call, Response response) throws IOException {
                 String res = response.body() != null ? response.body().string() : "";
 
+                // 🔥 PRINT THE RAW RESPONSE
+                System.out.println("🔥 SIGNUP RAW RESPONSE:");
+                System.out.println(res);
+
                 if (!response.isSuccessful()) {
                     runOnUiThread(() ->
-                            Toast.makeText(SignUpActivity.this, "Signup failed", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(SignUpActivity.this, "Signup failed: " + res, Toast.LENGTH_LONG).show()
                     );
                     return;
                 }
@@ -81,25 +85,15 @@ public class SignUpActivity extends AppCompatActivity {
                 try {
                     JSONObject json = new JSONObject(res);
 
-                    // Supabase signup usually returns { user: {...}, ... }
-                    if (!json.has("user")) {
-                        runOnUiThread(() ->
-                                Toast.makeText(SignUpActivity.this,
-                                        "Signup succeeded but user info missing.",
-                                        Toast.LENGTH_SHORT).show()
-                        );
-                        finish();
-                        return;
-                    }
-
-                    JSONObject userJson = json.getJSONObject("user");
-                    String userId = userJson.optString("id", null);
-                    String userEmail = userJson.optString("email", email);
+                    // 🔥 Supabase is returning the user at the TOP LEVEL:
+                    // { "id": "...", "email": "...", ... }
+                    String userId = json.optString("id", null);
+                    String userEmail = json.optString("email", email);
 
                     if (userId == null || userId.isEmpty()) {
                         runOnUiThread(() ->
                                 Toast.makeText(SignUpActivity.this,
-                                        "Signup succeeded but user id missing.",
+                                        "Signup succeeded but missing user id.",
                                         Toast.LENGTH_SHORT).show()
                         );
                         finish();
@@ -121,9 +115,12 @@ public class SignUpActivity extends AppCompatActivity {
 
     private void createUserRowInSupabase(String userId, String email) {
         SupabaseApi api = ApiClient.get(SignUpActivity.this);
-        UserRow row = new UserRow(userId, email, null); // display_name null for now
+        UserRow row = new UserRow(userId, email, null);
 
-        api.createUser(row).enqueue(new retrofit2.Callback<Void>() {
+        java.util.List<UserRow> payload = new java.util.ArrayList<>();
+        payload.add(row);
+
+        api.createUser(payload).enqueue(new retrofit2.Callback<Void>() {
             @Override
             public void onResponse(retrofit2.Call<Void> call,
                                    retrofit2.Response<Void> response) {
@@ -145,7 +142,6 @@ public class SignUpActivity extends AppCompatActivity {
                                 "Account created! Check your email to verify.",
                                 Toast.LENGTH_LONG).show();
                     }
-                    // Go back to Login
                     finish();
                 });
             }
@@ -161,4 +157,5 @@ public class SignUpActivity extends AppCompatActivity {
             }
         });
     }
+
 }

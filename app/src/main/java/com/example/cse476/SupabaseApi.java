@@ -51,7 +51,7 @@ public interface SupabaseApi {
             "Content-Type: application/json",
             "Prefer: return=minimal"
     })
-    Call<Void> createUser(@Body UserRow user);
+    Call<Void> createUser(@Body java.util.List<UserRow> users);
 
 
 
