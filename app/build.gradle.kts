@@ -7,7 +7,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.cse476"
+        applicationId = "com.team13.msuclubs"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
