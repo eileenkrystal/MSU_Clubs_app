@@ -28,26 +28,42 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // connects Java code to the XML layout file
         setContentView(R.layout.activity_login);
 
-        // Initialize views by connecting Java variables to XML elements
+        // Views
         netIdEditText = findViewById(R.id.netIdEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         rememberMeCheckBox = findViewById(R.id.rememberMeCheckBox);
         loginButton = findViewById(R.id.loginButton);
 
-        // Set up login button click listener
-        // When button is clicked, call attemptLogin() method
+        // Load prefs
+        var prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
+        String existingToken = prefs.getString("JWT", null);
+        boolean remember = prefs.getBoolean("REMEMBER_ME", false);
+        String savedEmail = prefs.getString("SAVED_EMAIL", "");
+
+        // Prefill email / checkbox
+        if (!savedEmail.isEmpty()) {
+            netIdEditText.setText(savedEmail);
+        }
+        rememberMeCheckBox.setChecked(remember);
+
+        // If user wanted to be remembered and we still have a token,
+        // skip login screen entirely
+        if (remember && existingToken != null) {
+            startActivity(new Intent(LoginActivity.this, ClubsActivity.class));
+            finish();
+            return;
+        }
+
         loginButton.setOnClickListener(v -> attemptLogin());
 
         Button signupRedirect = findViewById(R.id.signupRedirectButton);
         signupRedirect.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, SignUpActivity.class))
         );
-
     }
+
 
     // This method handles the login process
 //    private void attemptLogin() {
@@ -87,8 +103,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void attemptLogin() {
-        String email = ((EditText)findViewById(R.id.netIdEditText)).getText().toString().trim();
-        String password = ((EditText)findViewById(R.id.passwordEditText)).getText().toString().trim();
+        String email = netIdEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
 
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please enter your credentials", Toast.LENGTH_SHORT).show();
@@ -122,10 +138,8 @@ public class LoginActivity extends AppCompatActivity {
                 try {
                     JSONObject json = new JSONObject(res);
 
-                    // If Supabase returns an error like "email_not_confirmed"
                     if (!response.isSuccessful()) {
                         String msg = json.optString("msg", "Login failed");
-
                         runOnUiThread(() ->
                                 Toast.makeText(LoginActivity.this,
                                         "Login failed: " + msg,
@@ -134,7 +148,6 @@ public class LoginActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // If successful but missing access_token → email not verified
                     if (!json.has("access_token")) {
                         runOnUiThread(() ->
                                 Toast.makeText(LoginActivity.this,
@@ -144,17 +157,35 @@ public class LoginActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Normal successful login
+                    // ✅ Tokens from Supabase
                     String token = json.getString("access_token");
+                    String refreshToken = json.optString("refresh_token", null);
 
-                    getSharedPreferences("APP_PREFS", MODE_PRIVATE)
-                            .edit()
-                            .putString("JWT", token)
-                            .apply();
+                    // Supabase auth response has a "user" object with "id"
+                    String userId = null;
+                    if (json.has("user")) {
+                        JSONObject user = json.getJSONObject("user");
+                        userId = user.optString("id", null);
+                    }
+
+                    boolean remember = rememberMeCheckBox.isChecked();
+
+                    var editor = getSharedPreferences("APP_PREFS", MODE_PRIVATE).edit();
+                    editor.putString("JWT", token);
+                    if (refreshToken != null) editor.putString("REFRESH_TOKEN", refreshToken);
+                    if (userId != null) editor.putString("USER_ID", userId);
+                    editor.putBoolean("REMEMBER_ME", remember);
+                    if (remember) {
+                        editor.putString("SAVED_EMAIL", email);
+                    } else {
+                        editor.remove("SAVED_EMAIL");
+                    }
+                    editor.apply();
 
                     runOnUiThread(() -> {
                         Toast.makeText(LoginActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
                         startActivity(new Intent(LoginActivity.this, ClubsActivity.class));
+                        finish();
                     });
 
                 } catch (Exception e) {
@@ -163,8 +194,8 @@ public class LoginActivity extends AppCompatActivity {
                     );
                 }
             }
-
         });
     }
+
 
 }

@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -26,6 +27,8 @@ public class ClubsActivity extends AppCompatActivity {
     private CheckBox stemFilterCheckBox;
     private RecyclerView recyclerClubs;
     private ProgressBar progressBar;
+    private Button profileButton;
+    private Button logoutButton;   // 👈 new
 
     private ClubAdapter adapter;
 
@@ -38,10 +41,35 @@ public class ClubsActivity extends AppCompatActivity {
         stemFilterCheckBox = findViewById(R.id.stemFilterCheckBox);
         recyclerClubs = findViewById(R.id.recyclerClubs);
         progressBar = findViewById(R.id.progressBar);
+        profileButton = findViewById(R.id.profileButton);
+        logoutButton = findViewById(R.id.logoutButton);   // 👈 new
+
+        // Profile button: go to ProfileActivity
+        profileButton.setOnClickListener(v -> {
+            Intent intent = new Intent(ClubsActivity.this, ProfileActivity.class);
+            startActivity(intent);
+        });
+
+        // Logout button: clear session + go to LoginActivity
+        logoutButton.setOnClickListener(v -> {
+            // Clear everything we stored for this session, including "remember me"
+            getSharedPreferences("APP_PREFS", MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply();
+
+            Toast.makeText(ClubsActivity.this, "Logged out", Toast.LENGTH_SHORT).show();
+
+            Intent intent = new Intent(ClubsActivity.this, LoginActivity.class);
+            // Clear the back stack so user can't hit Back to return here
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+
+            finish();
+        });
 
         // RecyclerView setup
         adapter = new ClubAdapter(club -> {
-            // Click -> go to details
             Intent intent = new Intent(ClubsActivity.this, ClubDetailsActivity.class);
             intent.putExtra("CLUB_ID", club.id);
             startActivity(intent);
@@ -82,7 +110,6 @@ public class ClubsActivity extends AppCompatActivity {
                     return;
                 }
                 adapter.setData(response.body());
-                // apply current filters
                 adapter.applyFilters(searchEditText.getText().toString(), stemFilterCheckBox.isChecked());
             }
 

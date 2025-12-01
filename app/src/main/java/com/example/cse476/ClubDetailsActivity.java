@@ -9,6 +9,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 
+import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import java.util.List;
@@ -22,6 +23,10 @@ public class ClubDetailsActivity extends AppCompatActivity {
     private LocationHelper locationHelper;
     private String clubLocation; // used by directions button
 
+    // New: track IDs
+    private String clubId;
+    private String userId;
+
     // Views
     private TextView clubNameTextView;
     private TextView meetingTimeTextView;
@@ -30,6 +35,9 @@ public class ClubDetailsActivity extends AppCompatActivity {
     private CheckBox favoriteCheckBox;
     private SwitchCompat reminderSwitch;
     private Button directionsButton;
+
+    // To avoid firing network calls when we just setChecked programmatically
+    private boolean isUpdatingFavoriteUi = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,16 +60,20 @@ public class ClubDetailsActivity extends AppCompatActivity {
         locationTextView.setText("");
         if (clubDescriptionTextView != null) clubDescriptionTextView.setText("");
 
-        // “Reset every time”: fetch fresh by CLUB_ID
-        String clubId = getIntent().getStringExtra("CLUB_ID");
+        // IDs
+        clubId = getIntent().getStringExtra("CLUB_ID");
+        userId = getSharedPreferences("APP_PREFS", MODE_PRIVATE).getString("USER_ID", null);
+
         if (clubId == null || clubId.isEmpty()) {
             bindEmpty("No club id provided");
         } else {
             fetchClubById(clubId);
         }
 
-        // Keep your listeners
+        // Directions button
         directionsButton.setOnClickListener(v -> handleGetDirections());
+
+        // Reminder switch (local only for now)
         reminderSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 Toast.makeText(this, R.string.reminder_set, Toast.LENGTH_SHORT).show();
@@ -70,12 +82,44 @@ public class ClubDetailsActivity extends AppCompatActivity {
             }
         });
 
-        // Restore UI state (favorites/reminder) if rotating
+        // Favorite checkbox
+        favoriteCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // If we're just syncing UI from network, don't call API again
+            if (isUpdatingFavoriteUi) return;
+
+            if (userId == null) {
+                Toast.makeText(this, "Please log in again to use favorites.", Toast.LENGTH_SHORT).show();
+                // Reset UI to unchecked if we can't favorite
+                isUpdatingFavoriteUi = true;
+                favoriteCheckBox.setChecked(false);
+                isUpdatingFavoriteUi = false;
+                return;
+            }
+
+            if (clubId == null || clubId.isEmpty()) {
+                Toast.makeText(this, "Club ID missing, cannot update favorites.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (isChecked) {
+                addFavorite();
+            } else {
+                removeFavorite();
+            }
+        });
+
+        // Restore UI state (reminder only; favorite now comes from backend)
         if (savedInstanceState != null) {
-            favoriteCheckBox.setChecked(savedInstanceState.getBoolean("isFavorite", false));
             reminderSwitch.setChecked(savedInstanceState.getBoolean("reminderOn", false));
         }
+
+        // After listeners are set, check favorite status if we have both IDs
+        if (clubId != null && !clubId.isEmpty() && userId != null) {
+            checkIfFavorite();
+        }
     }
+
+    // ---------------- CLUB DATA ----------------
 
     private void fetchClubById(String id) {
         SupabaseApi api = ApiClient.get(this);
@@ -129,6 +173,94 @@ public class ClubDetailsActivity extends AppCompatActivity {
         return trimmed.isEmpty() ? fallback : trimmed;
     }
 
+    // ---------------- FAVORITES LOGIC ----------------
+
+    private void checkIfFavorite() {
+        SupabaseApi api = ApiClient.get(this);
+        String userFilter = "eq." + userId;
+        String clubFilter = "eq." + clubId;
+
+        api.getFavorite(userFilter, clubFilter, "*").enqueue(new Callback<List<Favorite>>() {
+            @Override
+            public void onResponse(Call<List<Favorite>> call, Response<List<Favorite>> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    // If it fails, just leave unchecked silently
+                    return;
+                }
+
+                boolean isFav = !response.body().isEmpty();
+
+                isUpdatingFavoriteUi = true;
+                favoriteCheckBox.setChecked(isFav);
+                isUpdatingFavoriteUi = false;
+            }
+
+            @Override
+            public void onFailure(Call<List<Favorite>> call, Throwable t) {
+                // Ignore on failure; user can still try to toggle
+            }
+        });
+    }
+
+    private void addFavorite() {
+        SupabaseApi api = ApiClient.get(this);
+        Favorite fav = new Favorite(userId, clubId);
+
+        api.addFavorite(fav).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!response.isSuccessful()) {
+                    // Revert UI if backend failed
+                    isUpdatingFavoriteUi = true;
+                    favoriteCheckBox.setChecked(false);
+                    isUpdatingFavoriteUi = false;
+                    Toast.makeText(ClubDetailsActivity.this, "Failed to add favorite", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(ClubDetailsActivity.this, "Added to favorites", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                isUpdatingFavoriteUi = true;
+                favoriteCheckBox.setChecked(false);
+                isUpdatingFavoriteUi = false;
+                Toast.makeText(ClubDetailsActivity.this, "Error adding favorite", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void removeFavorite() {
+        SupabaseApi api = ApiClient.get(this);
+        String userFilter = "eq." + userId;
+        String clubFilter = "eq." + clubId;
+
+        api.deleteFavorite(userFilter, clubFilter).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!response.isSuccessful()) {
+                    // Revert UI if backend failed
+                    isUpdatingFavoriteUi = true;
+                    favoriteCheckBox.setChecked(true);
+                    isUpdatingFavoriteUi = false;
+                    Toast.makeText(ClubDetailsActivity.this, "Failed to remove favorite", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(ClubDetailsActivity.this, "Removed from favorites", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                isUpdatingFavoriteUi = true;
+                favoriteCheckBox.setChecked(true);
+                isUpdatingFavoriteUi = false;
+                Toast.makeText(ClubDetailsActivity.this, "Error removing favorite", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ---------------- DIRECTIONS / PERMISSIONS ----------------
+
     private void handleGetDirections() {
         if (clubLocation == null || clubLocation.isEmpty()) {
             Toast.makeText(this, "No location available for this club", Toast.LENGTH_SHORT).show();
@@ -152,7 +284,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putBoolean("isFavorite", favoriteCheckBox.isChecked());
+        // Favorite state now lives in backend; only preserve reminder toggle
         outState.putBoolean("reminderOn", reminderSwitch.isChecked());
     }
 }
