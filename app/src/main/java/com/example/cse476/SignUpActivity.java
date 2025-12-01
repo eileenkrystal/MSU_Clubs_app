@@ -130,9 +130,16 @@ public class SignUpActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> {
                     if (!response.isSuccessful()) {
+                        String errMsg = "";
+                        try {
+                            if (response.errorBody() != null) {
+                                errMsg = response.errorBody().string();
+                            }
+                        } catch (IOException ignored) {}
+
                         Toast.makeText(SignUpActivity.this,
-                                "Account created, but user profile save failed (" + response.code() + ")",
-                                Toast.LENGTH_SHORT).show();
+                                "User row save failed (" + response.code() + "): " + errMsg,
+                                Toast.LENGTH_LONG).show();
                     } else {
                         Toast.makeText(SignUpActivity.this,
                                 "Account created! Check your email to verify.",
@@ -147,8 +154,8 @@ public class SignUpActivity extends AppCompatActivity {
             public void onFailure(retrofit2.Call<Void> call, Throwable t) {
                 runOnUiThread(() -> {
                     Toast.makeText(SignUpActivity.this,
-                            "Account created, but user profile save error.",
-                            Toast.LENGTH_SHORT).show();
+                            "User row save error: " + t.getMessage(),
+                            Toast.LENGTH_LONG).show();
                     finish();
                 });
             }

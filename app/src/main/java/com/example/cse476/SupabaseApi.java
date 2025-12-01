@@ -6,6 +6,7 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
 
@@ -46,6 +47,10 @@ public interface SupabaseApi {
 
     // POST /rest/v1/users
     @POST("rest/v1/users")
+    @Headers({
+            "Content-Type: application/json",
+            "Prefer: return=minimal"
+    })
     Call<Void> createUser(@Body UserRow user);
 
 

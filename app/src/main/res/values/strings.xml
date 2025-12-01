@@ -7,7 +7,7 @@
     <string name="login_button">SIGN IN</string>
 
     <!-- Club listing strings -->
-    <string name="clubs_title">STEM Clubs</string>
+    <string name="clubs_title">MSU Clubs</string>
     <string name="search_hint">Search clubs…</string>
     <string name="filter_stem">Show STEM clubs only</string>
 
