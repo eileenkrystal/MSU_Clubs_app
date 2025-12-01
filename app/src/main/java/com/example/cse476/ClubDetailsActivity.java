@@ -9,10 +9,11 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 
-import android.content.Intent;
 import android.content.pm.PackageManager;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -38,6 +39,26 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
     // To avoid firing network calls when we just setChecked programmatically
     private boolean isUpdatingFavoriteUi = false;
+
+    // Hardcoded locations for demo purposes (first few clubs alphabetically)
+    private static final Map<String, String> HARDCODED_LOCATIONS = new HashMap<>();
+    static {
+        // Map club slug -> MSU campus location
+        HARDCODED_LOCATIONS.put("021", "Engineering Building, 428 S Shaw Ln, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("180", "Minskoff Pavilion, 651 N Shaw Ln, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("4michmsu", "Student Services Building, 556 E Circle Dr, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("aac", "MSU Union, 49 Abbot Rd, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("aafmsu", "Communication Arts Building, 404 Wilson Rd, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("aaig", "Life Sciences Building, 1355 Bogue St, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("aasomsu", "International Center, 427 N Shaw Ln, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("abide", "MSU Union, 49 Abbot Rd, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("absws", "Baker Hall, 655 Auditorium Rd, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("abwd", "Life Sciences Building, 1355 Bogue St, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("acm", "Engineering Building, 428 S Shaw Ln, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("acs", "International Center, 427 N Shaw Ln, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("actuarial", "Wells Hall, 619 Red Cedar Rd, East Lansing, MI 48824");
+        HARDCODED_LOCATIONS.put("aero", "Bessey Hall, 434 Farm Ln, East Lansing, MI 48824");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,7 +151,16 @@ public class ClubDetailsActivity extends AppCompatActivity {
                     bindEmpty("Club not found (" + response.code() + ")");
                     return;
                 }
-                bindClub(response.body().get(0));
+                Club club = response.body().get(0);
+                
+                // Apply hardcoded location if club doesn't have one
+                if ((club.address == null || club.address.trim().isEmpty()) 
+                        && club.slug != null 
+                        && HARDCODED_LOCATIONS.containsKey(club.slug)) {
+                    club.address = HARDCODED_LOCATIONS.get(club.slug);
+                }
+                
+                bindClub(club);
             }
 
             @Override

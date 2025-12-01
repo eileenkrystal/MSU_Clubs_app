@@ -20,7 +20,6 @@ class ClubAdapter extends RecyclerView.Adapter<ClubAdapter.ClubVH> {
     private final List<Club> all = new ArrayList<>();
     private final List<Club> visible = new ArrayList<>();
     private final OnClubClick onClick;
-    private boolean filterStemOnly = false;
 
     ClubAdapter(OnClubClick onClick) {
         this.onClick = onClick;
@@ -29,11 +28,10 @@ class ClubAdapter extends RecyclerView.Adapter<ClubAdapter.ClubVH> {
     void setData(List<Club> clubs) {
         all.clear();
         if (clubs != null) all.addAll(clubs);
-        applyFilters("", filterStemOnly);
+        applyFilters("");
     }
 
-    void applyFilters(String query, boolean stemOnly) {
-        filterStemOnly = stemOnly;
+    void applyFilters(String query) {
         String q = query == null ? "" : query.trim().toLowerCase();
 
         visible.clear();
@@ -43,12 +41,7 @@ class ClubAdapter extends RecyclerView.Adapter<ClubAdapter.ClubVH> {
                             || (c.name != null && c.name.toLowerCase().contains(q))
                             || (c.slug != null && c.slug.toLowerCase().contains(q));
 
-            boolean matchesStem = !stemOnly
-                    || (c.slug != null && c.slug.toLowerCase().contains("stem"))
-                    || (c.name != null && c.name.toLowerCase().contains("stem"))
-                    || (c.description != null && c.description.toLowerCase().contains("stem"));
-
-            if (matchesQuery && matchesStem) {
+            if (matchesQuery) {
                 visible.add(c);
             }
         }
