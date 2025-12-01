@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 
 import android.content.pm.PackageManager;
+import android.util.Log;   // 🔹 LOG
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +21,8 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class ClubDetailsActivity extends AppCompatActivity {
+
+    private static final String TAG = "ClubDetailsActivity"; // 🔹 LOG
 
     private LocationHelper locationHelper;
     private String clubLocation; // used by directions button
@@ -43,7 +46,6 @@ public class ClubDetailsActivity extends AppCompatActivity {
     // Hardcoded locations for demo purposes (first few clubs alphabetically)
     private static final Map<String, String> HARDCODED_LOCATIONS = new HashMap<>();
     static {
-        // Map club slug -> MSU campus location
         HARDCODED_LOCATIONS.put("021", "Engineering Building, 428 S Shaw Ln, East Lansing, MI 48824");
         HARDCODED_LOCATIONS.put("180", "Minskoff Pavilion, 651 N Shaw Ln, East Lansing, MI 48824");
         HARDCODED_LOCATIONS.put("4michmsu", "Student Services Building, 556 E Circle Dr, East Lansing, MI 48824");
@@ -85,7 +87,10 @@ public class ClubDetailsActivity extends AppCompatActivity {
         clubId = getIntent().getStringExtra("CLUB_ID");
         userId = getSharedPreferences("APP_PREFS", MODE_PRIVATE).getString("USER_ID", null);
 
+        Log.d(TAG, "onCreate: clubId=" + clubId + ", userId=" + userId); // 🔹 LOG
+
         if (clubId == null || clubId.isEmpty()) {
+            Log.w(TAG, "No CLUB_ID extra found in intent"); // 🔹 LOG
             bindEmpty("No club id provided");
         } else {
             fetchClubById(clubId);
@@ -96,6 +101,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
         // Reminder switch (local only for now)
         reminderSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Log.d(TAG, "Reminder switch changed: " + isChecked); // 🔹 LOG
             if (isChecked) {
                 Toast.makeText(this, R.string.reminder_set, Toast.LENGTH_SHORT).show();
             } else {
@@ -105,12 +111,16 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
         // Favorite checkbox
         favoriteCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // If we're just syncing UI from network, don't call API again
-            if (isUpdatingFavoriteUi) return;
+            if (isUpdatingFavoriteUi) {
+                Log.d(TAG, "Favorite checkbox change ignored (isUpdatingFavoriteUi=true)"); // 🔹 LOG
+                return;
+            }
+
+            Log.d(TAG, "Favorite checkbox clicked. isChecked=" + isChecked +
+                    ", userId=" + userId + ", clubId=" + clubId); // 🔹 LOG
 
             if (userId == null) {
                 Toast.makeText(this, "Please log in again to use favorites.", Toast.LENGTH_SHORT).show();
-                // Reset UI to unchecked if we can't favorite
                 isUpdatingFavoriteUi = true;
                 favoriteCheckBox.setChecked(false);
                 isUpdatingFavoriteUi = false;
@@ -131,66 +141,75 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
         // Restore UI state (reminder only; favorite now comes from backend)
         if (savedInstanceState != null) {
-            reminderSwitch.setChecked(savedInstanceState.getBoolean("reminderOn", false));
+            boolean rem = savedInstanceState.getBoolean("reminderOn", false);
+            Log.d(TAG, "Restoring reminder switch: " + rem); // 🔹 LOG
+            reminderSwitch.setChecked(rem);
         }
 
         // After listeners are set, check favorite status if we have both IDs
         if (clubId != null && !clubId.isEmpty() && userId != null) {
+            Log.d(TAG, "Calling checkIfFavorite()"); // 🔹 LOG
             checkIfFavorite();
+        } else {
+            Log.d(TAG, "Not calling checkIfFavorite(): clubId or userId missing"); // 🔹 LOG
         }
     }
 
     // ---------------- CLUB DATA ----------------
 
     private void fetchClubById(String id) {
+        Log.d(TAG, "fetchClubById: id=" + id); // 🔹 LOG
         SupabaseApi api = ApiClient.get(this);
         api.getClubById("eq." + id, "*").enqueue(new Callback<List<Club>>() {
             @Override
             public void onResponse(Call<List<Club>> call, Response<List<Club>> response) {
+                Log.d(TAG, "fetchClubById onResponse: code=" + response.code()); // 🔹 LOG
                 if (!response.isSuccessful() || response.body() == null || response.body().isEmpty()) {
+                    Log.w(TAG, "fetchClubById failed: body=" + response.body()); // 🔹 LOG
                     bindEmpty("Club not found (" + response.code() + ")");
                     return;
                 }
                 Club club = response.body().get(0);
-                
-                // Apply hardcoded location if club doesn't have one
-                if ((club.address == null || club.address.trim().isEmpty()) 
-                        && club.slug != null 
+
+                Log.d(TAG, "Club loaded: id=" + club.id + ", slug=" + club.slug + ", name=" + club.name); // 🔹 LOG
+
+                if ((club.address == null || club.address.trim().isEmpty())
+                        && club.slug != null
                         && HARDCODED_LOCATIONS.containsKey(club.slug)) {
                     club.address = HARDCODED_LOCATIONS.get(club.slug);
+                    Log.d(TAG, "Applied hardcoded address for slug=" + club.slug); // 🔹 LOG
                 }
-                
+
                 bindClub(club);
             }
 
             @Override
             public void onFailure(Call<List<Club>> call, Throwable t) {
+                Log.e(TAG, "fetchClubById onFailure: " + t.getMessage(), t); // 🔹 LOG
                 bindEmpty("Error: " + t.getMessage());
             }
         });
     }
 
     private void bindClub(Club c) {
-        // Name
+        Log.d(TAG, "bindClub: " + c.id + " / " + c.name); // 🔹 LOG
         String name = safe(c.name, "Club");
         clubNameTextView.setText(name);
 
-        // Location/address -> also used for directions
         String address = safe(c.address, "");
         locationTextView.setText(address);
         clubLocation = address;
 
-        // Optional description
         if (clubDescriptionTextView != null) {
             String desc = safe(c.description, "");
             clubDescriptionTextView.setText(desc);
         }
 
-        // Meeting time (you can map a column later; keep placeholder empty for now)
         meetingTimeTextView.setText("");
     }
 
     private void bindEmpty(String reason) {
+        Log.w(TAG, "bindEmpty: " + reason); // 🔹 LOG
         clubNameTextView.setText("Club");
         locationTextView.setText("");
         if (clubDescriptionTextView != null) clubDescriptionTextView.setText(reason);
@@ -210,15 +229,21 @@ public class ClubDetailsActivity extends AppCompatActivity {
         String userFilter = "eq." + userId;
         String clubFilter = "eq." + clubId;
 
+        Log.d(TAG, "checkIfFavorite: userFilter=" + userFilter + ", clubFilter=" + clubFilter); // 🔹 LOG
+
         api.getFavorite(userFilter, clubFilter, "*").enqueue(new Callback<List<Favorite>>() {
             @Override
             public void onResponse(Call<List<Favorite>> call, Response<List<Favorite>> response) {
+                Log.d(TAG, "checkIfFavorite onResponse: code=" + response.code()); // 🔹 LOG
                 if (!response.isSuccessful() || response.body() == null) {
-                    // If it fails, just leave unchecked silently
+                    Log.w(TAG, "checkIfFavorite not successful. body=" + response.body()); // 🔹 LOG
                     return;
                 }
 
-                boolean isFav = !response.body().isEmpty();
+                List<Favorite> list = response.body();
+                Log.d(TAG, "checkIfFavorite: favorites count=" + list.size()); // 🔹 LOG
+
+                boolean isFav = !list.isEmpty();
 
                 isUpdatingFavoriteUi = true;
                 favoriteCheckBox.setChecked(isFav);
@@ -227,7 +252,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<List<Favorite>> call, Throwable t) {
-                // Ignore on failure; user can still try to toggle
+                Log.e(TAG, "checkIfFavorite onFailure: " + t.getMessage(), t); // 🔹 LOG
             }
         });
     }
@@ -235,12 +260,21 @@ public class ClubDetailsActivity extends AppCompatActivity {
     private void addFavorite() {
         SupabaseApi api = ApiClient.get(this);
         Favorite fav = new Favorite(userId, clubId);
+        Log.d(TAG, "addFavorite: userId=" + userId + ", clubId=" + clubId); // 🔹 LOG
 
         api.addFavorite(fav).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
+                Log.d(TAG, "addFavorite onResponse: code=" + response.code()); // 🔹 LOG
                 if (!response.isSuccessful()) {
-                    // Revert UI if backend failed
+                    String err = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            err = response.errorBody().string();
+                        }
+                    } catch (Exception ignored) {}
+                    Log.w(TAG, "addFavorite failed: " + err); // 🔹 LOG
+
                     isUpdatingFavoriteUi = true;
                     favoriteCheckBox.setChecked(false);
                     isUpdatingFavoriteUi = false;
@@ -252,6 +286,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "addFavorite onFailure: " + t.getMessage(), t); // 🔹 LOG
                 isUpdatingFavoriteUi = true;
                 favoriteCheckBox.setChecked(false);
                 isUpdatingFavoriteUi = false;
@@ -265,11 +300,21 @@ public class ClubDetailsActivity extends AppCompatActivity {
         String userFilter = "eq." + userId;
         String clubFilter = "eq." + clubId;
 
+        Log.d(TAG, "removeFavorite: userFilter=" + userFilter + ", clubFilter=" + clubFilter); // 🔹 LOG
+
         api.deleteFavorite(userFilter, clubFilter).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
+                Log.d(TAG, "removeFavorite onResponse: code=" + response.code()); // 🔹 LOG
                 if (!response.isSuccessful()) {
-                    // Revert UI if backend failed
+                    String err = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            err = response.errorBody().string();
+                        }
+                    } catch (Exception ignored) {}
+                    Log.w(TAG, "removeFavorite failed: " + err); // 🔹 LOG
+
                     isUpdatingFavoriteUi = true;
                     favoriteCheckBox.setChecked(true);
                     isUpdatingFavoriteUi = false;
@@ -281,6 +326,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "removeFavorite onFailure: " + t.getMessage(), t); // 🔹 LOG
                 isUpdatingFavoriteUi = true;
                 favoriteCheckBox.setChecked(true);
                 isUpdatingFavoriteUi = false;
@@ -292,6 +338,7 @@ public class ClubDetailsActivity extends AppCompatActivity {
     // ---------------- DIRECTIONS / PERMISSIONS ----------------
 
     private void handleGetDirections() {
+        Log.d(TAG, "handleGetDirections: clubLocation=" + clubLocation); // 🔹 LOG
         if (clubLocation == null || clubLocation.isEmpty()) {
             Toast.makeText(this, "No location available for this club", Toast.LENGTH_SHORT).show();
             return;
@@ -314,7 +361,6 @@ public class ClubDetailsActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        // Favorite state now lives in backend; only preserve reminder toggle
         outState.putBoolean("reminderOn", reminderSwitch.isChecked());
     }
 }

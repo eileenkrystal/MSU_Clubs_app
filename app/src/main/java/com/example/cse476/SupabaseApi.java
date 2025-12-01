@@ -7,6 +7,7 @@ import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Headers;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
 
@@ -52,6 +53,46 @@ public interface SupabaseApi {
             "Prefer: return=minimal"
     })
     Call<Void> createUser(@Body java.util.List<UserRow> users);
+
+    // ---------- PROFILES ----------
+
+    // GET /rest/v1/profiles?id=eq.<uuid>&select=*
+    @GET("rest/v1/profiles")
+    Call<List<Profile>> getProfile(
+            @Query("id") String idFilter,   // e.g. "eq.<uuid>"
+            @Query("select") String select  // e.g. "*"
+    );
+
+    // POST /rest/v1/profiles  (insert new profile row)
+    @POST("rest/v1/profiles")
+    @Headers({
+            "Content-Type: application/json",
+            "Prefer: return=minimal"
+    })
+    Call<Void> insertProfile(@Body Profile profile);
+
+    // PATCH /rest/v1/profiles?id=eq.<uuid>  (update existing row)
+    @PATCH("rest/v1/profiles")
+    @Headers({
+            "Content-Type: application/json",
+            "Prefer: return=minimal"
+    })
+    Call<Void> updateProfile(
+            @Query("id") String idFilter,   // "eq.<uuid>"
+            @Body Profile profile
+    );
+
+    // DELETE /rest/v1/profiles?id=eq.<uuid>
+    @DELETE("rest/v1/profiles")
+    Call<Void> deleteProfile(
+            @Query("id") String idFilter    // "eq.<uuid>"
+    );
+
+    @GET("rest/v1/clubs")
+    Call<List<Club>> getFavoriteClubs(
+            @Query("select") String select,
+            @Query("favorites.user_id") String userIdFilter   // e.g. "eq.<uid>"
+    );
 
 
 

@@ -71,19 +71,27 @@ public class ClubsActivity extends AppCompatActivity {
 
         // Logout button: clear session + go to LoginActivity
         logoutButton.setOnClickListener(v -> {
-            // Clear everything we stored for this session, including "remember me"
-            getSharedPreferences("APP_PREFS", MODE_PRIVATE)
-                    .edit()
-                    .clear()
-                    .apply();
+            var prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
+            var editor = prefs.edit();
+
+            // 🔹 clear auth/session stuff
+            editor.remove("JWT");
+            editor.remove("REFRESH_TOKEN");
+            editor.remove("USER_ID");
+
+            // 🔹 disable auto-login
+            editor.putBoolean("REMEMBER_ME", false);
+
+            // 🔹 keep SAVED_EMAIL and EMAIL so we can still prefill the login box
+            // (optional: if you WANT to clear them, just remove these too)
+
+            editor.apply();
 
             Toast.makeText(ClubsActivity.this, "Logged out", Toast.LENGTH_SHORT).show();
 
             Intent intent = new Intent(ClubsActivity.this, LoginActivity.class);
-            // Clear the back stack so user can't hit Back to return here
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
-
             finish();
         });
 

@@ -174,6 +174,10 @@ public class LoginActivity extends AppCompatActivity {
                     editor.putString("JWT", token);
                     if (refreshToken != null) editor.putString("REFRESH_TOKEN", refreshToken);
                     if (userId != null) editor.putString("USER_ID", userId);
+
+                    // 🔹 store the active user's email for ProfileActivity
+                    editor.putString("EMAIL", email);
+
                     editor.putBoolean("REMEMBER_ME", remember);
                     if (remember) {
                         editor.putString("SAVED_EMAIL", email);

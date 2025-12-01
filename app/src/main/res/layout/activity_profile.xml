@@ -31,6 +31,16 @@
             android:textColor="#666666"
             android:layout_marginBottom="24dp" />
 
+        <!-- Read-only email label -->
+        <TextView
+            android:id="@+id/profileEmailLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MSU Email"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
         <!-- Email (read-only) -->
         <EditText
             android:id="@+id/profileEmail"
@@ -42,7 +52,17 @@
             android:padding="12dp"
             android:textColor="#555555"
             android:textColorHint="#999999"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
+
+        <!-- Name label -->
+        <TextView
+            android:id="@+id/profileNameLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Name"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
 
         <!-- Name -->
         <EditText
@@ -56,17 +76,37 @@
             android:textColorHint="#999999"
             android:layout_marginBottom="16dp" />
 
+        <!-- Major label -->
+        <TextView
+            android:id="@+id/profileMajorLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Major"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
         <!-- Major -->
         <EditText
             android:id="@+id/profileMajor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Major"
+            android:hint="Major (e.g., Computer Science)"
             android:background="@android:drawable/edit_text"
             android:padding="12dp"
             android:textColor="#222222"
             android:textColorHint="#999999"
             android:layout_marginBottom="16dp" />
+
+        <!-- Year label -->
+        <TextView
+            android:id="@+id/profileYearLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Year"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
 
         <!-- Year -->
         <EditText
@@ -103,6 +143,34 @@
             android:backgroundTint="#EEEEEE"
             android:textColor="#B00020"
             android:layout_marginBottom="8dp" />
+
+        <!-- ⭐ Favorites section title -->
+        <TextView
+            android:id="@+id/favoritesTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Your Favorite Clubs"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#18453B"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Optional subtitle -->
+        <TextView
+            android:id="@+id/favoritesSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quick access to clubs you've starred."
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="12dp" />
+
+        <!-- RecyclerView for favorites -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerFavorites"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="ifContentScrolls" />
 
     </LinearLayout>
 

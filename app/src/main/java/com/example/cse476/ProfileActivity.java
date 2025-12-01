@@ -7,211 +7,268 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.util.List;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ProfileActivity extends AppCompatActivity {
 
     private EditText nameEdit, majorEdit, yearEdit, emailEdit;
     private Button saveBtn, deleteBtn;
 
-    private final OkHttpClient client = new OkHttpClient();
-    private String token;
+    private SupabaseApi api;
     private String userId;
+    private String userEmail;   // optional, if you stored it in prefs
+    private boolean hasExistingProfile = false;  // set after load
 
-    private static final MediaType JSON
-            = MediaType.parse("application/json; charset=utf-8");
+    private RecyclerView recyclerFavorites;
+    private ClubAdapter favoritesAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
-        // Hook up views
-        nameEdit = findViewById(R.id.profileName);
-        majorEdit = findViewById(R.id.profileMajor);
-        yearEdit = findViewById(R.id.profileYear);
-        emailEdit = findViewById(R.id.profileEmail);
-        saveBtn = findViewById(R.id.btnSaveProfile);
-        deleteBtn = findViewById(R.id.btnDeleteProfile);
+        // Bind profile fields
+        nameEdit   = findViewById(R.id.profileName);
+        majorEdit  = findViewById(R.id.profileMajor);
+        yearEdit   = findViewById(R.id.profileYear);
+        emailEdit  = findViewById(R.id.profileEmail);
+        saveBtn    = findViewById(R.id.btnSaveProfile);
+        deleteBtn  = findViewById(R.id.btnDeleteProfile);
 
-        // Load JWT + user ID from shared prefs
-        token = getSharedPreferences("APP_PREFS", MODE_PRIVATE).getString("JWT", null);
-        userId = getSharedPreferences("APP_PREFS", MODE_PRIVATE).getString("USER_ID", null);
+        // ⭐ Bind RecyclerView
+        recyclerFavorites = findViewById(R.id.recyclerFavorites);
 
-        if (token == null || userId == null) {
+        if (recyclerFavorites == null) {
+            // This means the view is NOT in activity_profile.xml
+            android.util.Log.e("ProfileActivity", "recyclerFavorites is NULL! Check activity_profile.xml layout and ID.");
+            Toast.makeText(this, "Favorites list not available (layout issue)", Toast.LENGTH_SHORT).show();
+            // Bail early for now so we don’t crash
+        } else {
+            // Set up adapter only if not null
+            favoritesAdapter = new ClubAdapter(club -> {
+                Intent intent = new Intent(ProfileActivity.this, ClubDetailsActivity.class);
+                intent.putExtra("CLUB_ID", club.id);
+                startActivity(intent);
+            });
+
+            recyclerFavorites.setLayoutManager(new LinearLayoutManager(this));
+            recyclerFavorites.setAdapter(favoritesAdapter);
+            recyclerFavorites.addItemDecoration(
+                    new androidx.recyclerview.widget.DividerItemDecoration(
+                            this,
+                            androidx.recyclerview.widget.DividerItemDecoration.VERTICAL
+                    )
+            );
+        }
+
+        // API + user info
+        api = ApiClient.get(this);
+        var prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
+        userId = prefs.getString("USER_ID", null);
+        userEmail = prefs.getString("EMAIL", "");
+
+        if (userId == null || userId.isEmpty()) {
             Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(ProfileActivity.this, LoginActivity.class));
             finish();
             return;
         }
 
-        loadProfile();
+        // Email is read-only
+        emailEdit.setText(userEmail);
+        emailEdit.setEnabled(false);
 
-        saveBtn.setOnClickListener(v -> updateProfile());
+        // Load stuff
+        loadProfile();
+        if (recyclerFavorites != null) {
+            loadFavoriteClubs();
+        }
+
+        saveBtn.setOnClickListener(v -> saveProfile());
         deleteBtn.setOnClickListener(v -> deleteProfile());
     }
 
+
     private void loadProfile() {
-        // Adjust "profiles" to whatever view/table you're actually using
-        String url = Config.SUPABASE_URL + "/rest/v1/profiles?id=eq." + userId;
+        String idFilter = "eq." + userId;
 
-        Request request = new Request.Builder()
-                .url(url)
-                .get()
-                .addHeader("apikey", Config.SUPABASE_ANNON_KEY)
-                .addHeader("Authorization", "Bearer " + token)
-                .addHeader("Accept", "application/json")
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
+        api.getProfile(idFilter, "*").enqueue(new Callback<List<Profile>>() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                runOnUiThread(() ->
-                        Toast.makeText(ProfileActivity.this, "Failed to load profile", Toast.LENGTH_SHORT).show()
-                );
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String res = response.body() != null ? response.body().string() : "";
-
+            public void onResponse(Call<List<Profile>> call, Response<List<Profile>> response) {
                 if (!response.isSuccessful()) {
-                    runOnUiThread(() ->
-                            Toast.makeText(ProfileActivity.this, "Load error: " + response.code(), Toast.LENGTH_SHORT).show()
-                    );
+                    showToast("Failed to load profile (" + response.code() + ")");
                     return;
                 }
 
-                try {
-                    JSONArray arr = new JSONArray(res);
-                    if (arr.length() == 0) {
-                        // No profile row yet – just show email if you have it, leave others blank
-                        runOnUiThread(() ->
-                                Toast.makeText(ProfileActivity.this, "No profile found yet", Toast.LENGTH_SHORT).show()
-                        );
-                        return;
-                    }
-
-                    JSONObject obj = arr.getJSONObject(0);
-
-                    runOnUiThread(() -> {
-                        emailEdit.setText(obj.optString("email", ""));
-                        nameEdit.setText(obj.optString("name", ""));
-                        majorEdit.setText(obj.optString("major", ""));
-                        yearEdit.setText(obj.optString("year", ""));
-                    });
-
-                } catch (Exception e) {
-                    runOnUiThread(() ->
-                            Toast.makeText(ProfileActivity.this, "Parse error", Toast.LENGTH_SHORT).show()
-                    );
+                List<Profile> body = response.body();
+                if (body == null || body.isEmpty()) {
+                    hasExistingProfile = false;
+                    showToast("No profile found yet. Fill it in and save!");
+                    return;
                 }
+
+                hasExistingProfile = true;
+                Profile p = body.get(0);
+
+                runOnUiThread(() -> {
+                    // Always show the auth email we already know
+                    emailEdit.setText(userEmail);
+
+                    nameEdit.setText(p.name != null ? p.name : "");
+                    majorEdit.setText(p.major != null ? p.major : "");
+                    yearEdit.setText(p.year != null ? p.year : "");
+                });
+            }
+
+            @Override
+            public void onFailure(Call<List<Profile>> call, Throwable t) {
+                showToast("Failed to load profile: " + t.getMessage());
             }
         });
     }
 
-    private void updateProfile() {
-        String name = nameEdit.getText().toString().trim();
+    private void saveProfile() {
+        String name  = nameEdit.getText().toString().trim();
         String major = majorEdit.getText().toString().trim();
-        String year = yearEdit.getText().toString().trim();
-        String email = emailEdit.getText().toString().trim(); // read-only in UI, but we still send if your table uses it
+        String year  = yearEdit.getText().toString().trim();
+        String email = userEmail;
 
         if (name.isEmpty() && major.isEmpty() && year.isEmpty()) {
-            Toast.makeText(this, "Please fill out at least one field", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please fill at least one field", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String url = Config.SUPABASE_URL + "/rest/v1/profiles?id=eq." + userId;
+        Profile p = new Profile(userId, email, name, major, year);
 
-        try {
-            JSONObject bodyJson = new JSONObject();
-            // include fields that make sense for your "profiles" row
-            bodyJson.put("email", email);
-            bodyJson.put("name", name);
-            bodyJson.put("major", major);
-            bodyJson.put("year", year);
-
-            RequestBody body = RequestBody.create(bodyJson.toString(), JSON);
-
-            Request request = new Request.Builder()
-                    .url(url)
-                    .patch(body)
-                    .addHeader("apikey", Config.SUPABASE_ANNON_KEY)
-                    .addHeader("Authorization", "Bearer " + token)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Prefer", "return=minimal")
-                    .build();
-
-            client.newCall(request).enqueue(new Callback() {
+        if (hasExistingProfile) {
+            // Update (PATCH)
+            String idFilter = "eq." + userId;
+            api.updateProfile(idFilter, p).enqueue(new Callback<Void>() {
                 @Override
-                public void onFailure(Call call, IOException e) {
-                    runOnUiThread(() ->
-                            Toast.makeText(ProfileActivity.this, "Update failed", Toast.LENGTH_SHORT).show()
-                    );
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) {
+                public void onResponse(Call<Void> call, Response<Void> response) {
                     runOnUiThread(() -> {
                         if (response.isSuccessful()) {
-                            Toast.makeText(ProfileActivity.this, "Profile saved!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ProfileActivity.this, "Profile updated!", Toast.LENGTH_SHORT).show();
                         } else {
-                            Toast.makeText(ProfileActivity.this, "Save error: " + response.code(), Toast.LENGTH_SHORT).show();
+                            String msg = "Save error: " + response.code();
+                            try {
+                                if (response.errorBody() != null) {
+                                    msg += " - " + response.errorBody().string();
+                                }
+                            } catch (IOException ignored) {}
+                            Toast.makeText(ProfileActivity.this, msg, Toast.LENGTH_LONG).show();
                         }
                     });
                 }
-            });
 
-        } catch (Exception e) {
-            Toast.makeText(this, "Error building request", Toast.LENGTH_SHORT).show();
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    showToast("Update failed: " + t.getMessage());
+                }
+            });
+        } else {
+            // Insert (POST)
+            api.insertProfile(p).enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    runOnUiThread(() -> {
+                        if (response.isSuccessful()) {
+                            hasExistingProfile = true;
+                            Toast.makeText(ProfileActivity.this, "Profile created!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            String msg = "Insert error: " + response.code();
+                            try {
+                                if (response.errorBody() != null) {
+                                    msg += " - " + response.errorBody().string();
+                                }
+                            } catch (IOException ignored) {}
+                            Toast.makeText(ProfileActivity.this, msg, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    showToast("Insert failed: " + t.getMessage());
+                }
+            });
         }
     }
 
     private void deleteProfile() {
-        String url = Config.SUPABASE_URL + "/rest/v1/profiles?id=eq." + userId;
+        String idFilter = "eq." + userId;
 
-        Request request = new Request.Builder()
-                .url(url)
-                .delete()
-                .addHeader("apikey", Config.SUPABASE_ANNON_KEY)
-                .addHeader("Authorization", "Bearer " + token)
-                .addHeader("Accept", "application/json")
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
+        api.deleteProfile(idFilter).enqueue(new Callback<Void>() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                runOnUiThread(() ->
-                        Toast.makeText(ProfileActivity.this, "Delete failed", Toast.LENGTH_SHORT).show()
-                );
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) {
+            public void onResponse(Call<Void> call, Response<Void> response) {
                 runOnUiThread(() -> {
                     if (response.isSuccessful()) {
-                        Toast.makeText(ProfileActivity.this, "Profile deleted!", Toast.LENGTH_SHORT).show();
-                        // Clear local session + go back to login
-                        getSharedPreferences("APP_PREFS", MODE_PRIVATE).edit().clear().apply();
-                        startActivity(new Intent(ProfileActivity.this, LoginActivity.class));
-                        finish();
+                        hasExistingProfile = false;
+                        nameEdit.setText("");
+                        majorEdit.setText("");
+                        yearEdit.setText("");
+                        Toast.makeText(ProfileActivity.this, "Profile deleted", Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(ProfileActivity.this, "Delete error: " + response.code(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ProfileActivity.this,
+                                "Delete error: " + response.code(),
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
             }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                showToast("Delete failed: " + t.getMessage());
+            }
         });
     }
+    private void loadFavoriteClubs() {
+        if (userId == null || userId.isEmpty()) {
+            return;
+        }
+
+        String userFilter = "eq." + userId;
+        String select = "*,favorites!inner(user_id)";
+
+        api.getFavoriteClubs(select, userFilter).enqueue(new Callback<List<Club>>() {
+            @Override
+            public void onResponse(Call<List<Club>> call, Response<List<Club>> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    showToast("Failed to load favorites (" + response.code() + ")");
+                    return;
+                }
+
+                List<Club> favClubs = response.body();
+                runOnUiThread(() -> {
+                    favoritesAdapter.setData(favClubs);
+                    favoritesAdapter.applyFilters("");  // no search filter here
+                    if (favClubs.isEmpty()) {
+                        showToast("You haven't favorited any clubs yet.");
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call<List<Club>> call, Throwable t) {
+                showToast("Failed to load favorites: " + t.getMessage());
+            }
+        });
+    }
+
+    private void showToast(String msg) {
+        runOnUiThread(() ->
+                Toast.makeText(ProfileActivity.this, msg, Toast.LENGTH_SHORT).show()
+        );
+    }
+
+
 }
